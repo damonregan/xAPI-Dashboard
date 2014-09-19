@@ -1,0 +1,153 @@
+<html>
+<head>
+	<title>xAPI Warrior Athlete Dashboard</title>
+	<link rel='stylesheet' href='../lib/nv.d3.css'></link>
+	<!--<script type="text/javascript" src="dist/xapidashboard.min.js"></script>-->
+	
+	<script type="text/javascript" src="../lib/d3.v3.js" charset="utf-8"></script>
+	<script type="text/javascript" src="../lib/nv.d3.js"></script>
+	<script type="text/javascript" src="../lib/xapiwrapper.min.js"></script>
+	<script type="text/javascript" src="../src/chart.js"></script>
+	<script type="text/javascript" src="../src/dashboard.js"></script>
+	<script type="text/javascript" src="../src/xapicollection.js"></script>
+	
+	<script src='../extra/testNutritionData.js'></script>
+</head>
+<body>
+	<style>
+		.nv-axislabel {
+			font-size: 18px;
+		}
+		#main{
+			width: 100%;
+		}
+		svg{
+			width: 50%;
+			height: 50%;
+			float:left;
+			clear: left;
+		}
+		
+		#caloriesperstudentsvg{
+			width: 65%;
+			height: 55%;
+			margin: 0 auto;
+			float: none;	
+		}
+
+		#svg2{
+			width: 65%;
+			height: 55%;
+			margin: 0 auto;
+			float: none;	
+		}		
+	
+		#children{
+			margin-left: auto;
+			margin-right: auto;
+			width: 70%;
+			clear:both;
+			margin-top: 0px;
+			padding: 70px 0;
+		}
+	</style>
+	<div id="main">
+		<h2 style="text-align:center;">Total Calories per Student</h2>
+		
+		<svg id="caloriesperstudentsvg"></svg>
+	</div>
+	<div id="children">
+	
+		<h2 id="foodchoicestitle" style="text-align:center; margin-bottom:50px"></h2>
+		
+		<div id="foodchoices">
+			<svg id="foodchoicessvg"></svg>
+		</div>
+		<div id="foodbreakdown">	
+			<div id="foodbreakdowntable"></div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		//To-do: add comments
+	
+		var wrapper = new XAPIWrapper({"endpoint" : 'https://lrs.adlnet.gov/xAPI/'});
+		var dash = new ADL.XAPIDashboard('#svg');
+//		var saveTest = '', scoreArr, totalStudents = 30;
+		
+		dash.addStatements(window.statements);
+		
+		var foodbreakdowntable = dash.createTable({
+			container: '#foodbreakdowntable',
+			groupBy: 'object.definition.name',
+			pre: function(data, event){
+				console.log(event)
+				studentin = event.in
+				data.where('actor.name = "' + studentin + '"');
+			},
+			post: function(data, event){
+				console.log(data);
+			},
+			aggregate: ADL.multiAggregate(ADL.select('context.calories'), ADL.select('context.fat'), ADL.select('context.carbs'), ADL.select('context.protein'))
+		});		
+		
+		var parentChart = dash.createBarChart({
+			container: '#main #caloriesperstudentsvg',
+			groupBy: 'actor.name',
+			aggregate: ADL.sum("context.calories"),
+			post: function(data){
+				data.orderBy('out','descending').slice(0,25);
+			},
+			customize: function(nvd3chart){
+				nvd3chart.margin({bottom: 150, right: 50});
+				nvd3chart.yAxis.axisLabel("Total Calories");
+				nvd3chart.xAxis.axisLabel("Students");
+				nvd3chart.xAxis.rotateLabels(45);
+				nvd3chart.xAxis.tickFormat(function(label){
+					//var parts = /https?:\/\/.*?(\w+\.\w{2,3}).*(\/.+)$/.exec(label);
+					//return parts.slice(1,3).join('');
+					return /[^\/]+$/.exec(label)[0];
+				});
+			}
+		});
+	
+		// create first graph
+		var foodChart = dash.createBarChart({
+			container: '#foodchoices #foodchoicessvg',
+			groupBy: 'object.id',
+			aggregate: ADL.count(),
+			pre: function(data, event){
+				studentin = event.in;
+				data.where('actor.name = "' + studentin + '"');
+			},
+			post: function(data){
+				data.orderBy('out','descending').slice(0,25);
+			},
+			customize: function(nvd3chart){
+				nvd3chart.margin({bottom: 150, right: 50});
+				nvd3chart.xAxis.rotateLabels(45);
+				nvd3chart.yAxis.axisLabel("Number of Food Choices");
+				nvd3chart.xAxis.axisLabel("Food Choices");				
+				ADL.$('#foodchoicestitle').textContent = 'Food Choices for ' + studentin;
+				nvd3chart.xAxis.tickFormat(function(label){
+					//var parts = /https?:\/\/.*?(\w+\.\w{2,3}).*(\/.+)$/.exec(label);
+					//return parts.slice(1,3).join('');
+					return /[^\/]+$/.exec(label)[0];
+				});
+			}
+		});
+		
+		parentChart.addChild([foodChart, foodbreakdowntable]);
+		parentChart.draw();
+
+		/*if( window.statements ){
+			dash.addStatements(window.statements);
+			window.statements = null;
+			generateGraphs();
+		}
+		else {
+			dash.fetchAllStatements({'since': new Date(Date.now() - set.day * 30).toISOString()}, wrapper, generateGraphs);
+		}*/
+	</script>
+</body>
+</html>
