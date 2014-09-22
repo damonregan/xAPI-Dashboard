@@ -238,10 +238,10 @@ def main():
 		global nameData
 		nameData = json.load(names)
 	
-	randomFoodCountMax = 7	
+	randomFoodCountMax = 5	
 	numStudents = 100
 	randomCaloriesMin = 50
-	randomCaloriesMax = 1000
+	randomCaloriesMax = 500
 	randomComponentMin = 5
 	randomComponentMax = 20
 	

@@ -11,6 +11,9 @@
 		<script type="text/javascript" src="../src/xapicollection.js"></script>
 		<script src='../extra/testVideoData.js'></script>
 		<style>
+			.nv-axislabel {
+				font-size: 18px;
+			}		
 			h2 {
 				text-align: center;
 			}
@@ -57,7 +60,9 @@
 					data.orderBy('out','descending').slice(0,25);
 				},
 				customize: function(nvd3chart){
-					nvd3chart.margin({bottom: 250, right: 50});
+					nvd3chart.margin({bottom: 300, right: 50});
+					nvd3chart.yAxis.axisLabel("Number of Views");
+					nvd3chart.xAxis.axisLabel("Video Titles");						
 					nvd3chart.xAxis.rotateLabels(45);
 					nvd3chart.xAxis.tickFormat(function(label){
 						//var parts = /https?:\/\/.*?(\w+\.\w{2,3}).*(\/.+)$/.exec(label);
