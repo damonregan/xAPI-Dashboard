@@ -71,58 +71,58 @@
 	<script type="text/javascript">
 		//To-do: add comments
 	
-		var wrapper = new XAPIWrapper({"endpoint" : 'https://lrs.adlnet.gov/xAPI/'});
+		var wrapper = new XAPIWrapper({
+			"endpoint": 'http://ec2-54-85-28-165.compute-1.amazonaws.com:8100/xAPI/',
+			'username': 'dashReporting', 'password': 'ReportingDataAnalytics'
+		});
 		var dash = new ADL.XAPIDashboard('#svg');
 //		var saveTest = '', scoreArr, totalStudents = 30;
-		
-		dash.addStatements(window.statements);
+	
+		dash.fetchAllStatements({
+			'verb':'http://adlnet.gov/expapi/verbs/attempted',
+			'activity':'i4x://ADL/WA_101/problem/e150ecbec170459b8f0f6aaacab41395'
+		}, wrapper, function(data){
 		
 		var foodbreakdowntable = dash.createTable({
 			container: '#foodbreakdowntable',
-			groupBy: 'object.definition.name',
 			pre: function(data, event){
-				console.log(event)
+				//console.log(event)
 				studentin = event.in
 				data.where('actor.name = "' + studentin + '"');
 			},
+			groupBy: 'object.definition.name',
+			aggregate: ADL.multiAggregate(ADL.select('context.extensions.ext_id:nutrition.calories'), ADL.select('context.fat'), ADL.select('context.carbs'), ADL.select('context.protein')),
 			post: function(data, event){
-				console.log(data);
+				//console.log(data);
 				data.contents[0].key = "Calories";
 				data.contents[1].key = "Fat";
 				data.contents[2].key = "Carbs";
 				data.contents[3].key = "Protein";
 			},
-			aggregate: ADL.multiAggregate(ADL.select('context.calories'), ADL.select('context.fat'), ADL.select('context.carbs'), ADL.select('context.protein')),
 			customize: function(nvd3table){
-				var header = ADL.$('#foodbreakdowntable tbody').textContent;
-				console.log(header);
+				//var header = ADL.$('#foodbreakdowntable tbody').textContent;
+				//console.log(header);
 			}
 		});		
 		
 		var parentChart = dash.createBarChart({
 			container: '#main #caloriesperstudentsvg',
 			groupBy: 'actor.name',
-			aggregate: ADL.sum("context.calories"),
+			aggregate: ADL.select("context.extensions.ext_id:nutrition.calories"),
 			post: function(data){
-				data.orderBy('out','descending').slice(0,25);
+				data.orderBy('out','ascending').slice(0,25);
 			},
 			customize: function(nvd3chart){
 				nvd3chart.margin({bottom: 150, right: 50});
 				nvd3chart.yAxis.axisLabel("Total Calories");
 				nvd3chart.xAxis.axisLabel("Students");
 				nvd3chart.xAxis.rotateLabels(45);
-				nvd3chart.xAxis.tickFormat(function(label){
-					//var parts = /https?:\/\/.*?(\w+\.\w{2,3}).*(\/.+)$/.exec(label);
-					//return parts.slice(1,3).join('');
-					return /[^\/]+$/.exec(label)[0];
-				});
 			}
 		});
 	
-		// create first graph
 		var foodChart = dash.createBarChart({
 			container: '#foodchoices #foodchoicessvg',
-			groupBy: 'object.id',
+			/*groupBy: 'object.id',
 			aggregate: ADL.sum('context.calories'),
 			pre: function(data, event){
 				studentin = event.in;
@@ -131,24 +131,25 @@
 			post: function(data){
 				console.log(data);
 				data.orderBy('out','descending').slice(0,25);
+			},*/
+			process: function(data,event,opts){
+				var mealdata = data.where('actor.name = "'+event.in+'"').select('context.extensions.ext_id:nutrition.items as mealdata');
+				mealdata = new ADL.Collection(mealdata.contents[0].mealdata);
+				mealdata.groupBy('label').sum('calories').select('group as in, sum as out').exec(opts.cb);
 			},
-			//process: function(){},
 			customize: function(nvd3chart){
 				nvd3chart.margin({bottom: 150, right: 50});
 				nvd3chart.xAxis.rotateLabels(45);
 				nvd3chart.yAxis.axisLabel("Total Calories");
 				nvd3chart.xAxis.axisLabel("Food Choices");				
 				ADL.$('#foodchoicestitle').textContent = 'Food Choices for ' + studentin;
-				nvd3chart.xAxis.tickFormat(function(label){
-					//var parts = /https?:\/\/.*?(\w+\.\w{2,3}).*(\/.+)$/.exec(label);
-					//return parts.slice(1,3).join('');
-					return /[^\/]+$/.exec(label)[0];
-				});
 			}
 		});
 		
 		parentChart.addChild([foodChart, foodbreakdowntable]);
 		parentChart.draw();
+
+		});
 
 		/*if( window.statements ){
 			dash.addStatements(window.statements);
